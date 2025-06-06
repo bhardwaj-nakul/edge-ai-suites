@@ -6,7 +6,7 @@ services:
     hostname: mqtt
     container_name: mqtt_broker
     volumes:
-      - ./mosquitto/config:/mosquitto/config:ro
+      - ./${SAMPLE_APP}/mosquitto/config:/mosquitto/config:ro
     ports:
       - "1883:1883"
       - "9001:9001"
@@ -33,9 +33,9 @@ services:
       - SERVICE_NAME=dlstreamer-pipeline-server
     volumes:
       - vol_dlsps_pipeline_root:/var/cache/pipeline_root:uid=1999,gid=1999
-      - "./dlsps/models:/home/pipeline-server/models"
-      - "./dlsps/videos:/home/pipeline-server/videos"
-      - "./dlsps/config.json:/home/pipeline-server/config.json"
+      - "./${SAMPLE_APP}/dlsps/models:/home/pipeline-server/models"
+      - "./${SAMPLE_APP}/dlsps/videos:/home/pipeline-server/videos"
+      - "./${SAMPLE_APP}/dlsps/config.json:/home/pipeline-server/config.json"
       - "/run/udev:/run/udev:ro"
       - "/dev:/dev"
       - "/tmp:/tmp"
@@ -68,6 +68,7 @@ services:
       - MTX_WEBRTCICESERVERS2_0_URL=turn:${HOST_IP}:3478
       - MTX_WEBRTCICESERVERS2_0_USERNAME=myusername
       - MTX_WEBRTCICESERVERS2_0_PASSWORD=mypassword
+      - MTX_WEBRTCTRACKGATHERTIMEOUT=10s
     ports:
       - "8889:8889"
       - "8189:8189"
@@ -91,11 +92,11 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - "./grafana/dashboards.yml:/etc/grafana/provisioning/dashboards/main.yml"
-      - "./grafana/dashboards:/var/lib/grafana/dashboards"
-      - "./grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml"
-      - "./grafana/grafana.ini:/etc/grafana/grafana.ini"
-      - "./grafana/test_plugin:/var/lib/grafana/plugins/intel-custom-panel"
+      - "./${SAMPLE_APP}/grafana/dashboards.yml:/etc/grafana/provisioning/dashboards/main.yml"
+      - "./${SAMPLE_APP}/grafana/dashboards:/var/lib/grafana/dashboards"
+      - "./${SAMPLE_APP}/grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml"
+      - "./${SAMPLE_APP}/grafana/grafana.ini:/etc/grafana/grafana.ini"
+      - "./${SAMPLE_APP}/grafana/test_plugin:/var/lib/grafana/plugins/intel-custom-panel"
     networks:
       - app_network
     environment:
@@ -110,8 +111,8 @@ services:
       https_proxy: ${https_proxy}
       no_proxy: ${no_proxy}
     volumes:
-      - "./node-red:/data"
-      - "./dlsps/videos:/data/public/videos"
+      - "./${SAMPLE_APP}/node-red:/data"
+      - "./${SAMPLE_APP}/dlsps/videos:/data/public/videos"
     ipc: "none"
     entrypoint: [ "/bin/bash", "-c", "/data/install_package.sh && /usr/src/node-red/entrypoint.sh" ]
     user: root

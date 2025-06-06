@@ -8,10 +8,9 @@ docker run --rm --user=root \
 cd /opt/project
 export HOST_IP="${1:-$(hostname -I | cut -f1 -d' ')}"
 echo "Configuring application to use \$HOST_IP"
-echo "HOST_IP=\$HOST_IP" >> .env 
 
 # shellcheck disable=SC1091
-. ./update_dashboard.sh
+. ./update_dashboard.sh \$HOST_IP
 
 ##############################################################################
 # 4. Process YOLO model (if any)
@@ -53,7 +52,7 @@ for video_name in "\${!video_urls[@]}"; do
 done
 
 echo "Fix ownership..."
-chown -R "$(id -u):$(id -g)" .env dlsps/models dlsps/videos 2>/dev/null || true
+chown -R "$(id -u):$(id -g)" dlsps/models dlsps/videos 2>/dev/null || true
 EOF
 
 )"

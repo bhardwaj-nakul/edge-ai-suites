@@ -1,10 +1,11 @@
 #!/bin/bash
 
-# Load environment variables
-if [ -f .env ]; then
-  source .env
+# Get HOST_IP from command line argument or .env file
+if [ $# -ge 1 ]; then
+  HOST_IP="$1"
+  echo "Using HOST_IP from command line: $HOST_IP"
 else
-  echo "Error: .env file not found!"
+  echo "Error: No command line argument provided!"
   exit 1
 fi
 

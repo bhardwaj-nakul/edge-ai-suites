@@ -37,14 +37,14 @@
       },
       "id": 13,
       "options": {
-        "mqttLink": "ws://0.0.0.0:9001/mqtt",
-        "mqttTopic": "loiter_status_1",
+        "mqttLink": "ws://10.223.22.102:9001/mqtt",
+        "mqttTopic": "loiter_status_4",
         "regionPosition": [
-          "[{\"name\": \"Region 1_1\"}, {\"x\": 0, \"y\": 450}, {\"x\": 300, \"y\": 350}, {\"x\": 320, \"y\": 600}, {\"x\": 0, \"y\": 730}]"
+          "[{\"name\": \"Region 4_1\"}, {\"x\": 0, \"y\": 450}, {\"x\": 300, \"y\": 350}, {\"x\": 320, \"y\": 600}, {\"x\": 0, \"y\": 730}]"
         ],
         "videoHeight": 1080,
         "videoWidth": 1920,
-        "webrtcUrl": "http://0.0.0.0:8889/object_tracking_1"
+        "webrtcUrl": "http://10.223.22.102:8889/object_tracking_4"
       },
       "pluginVersion": "1.0.0",
       "targets": [
@@ -64,7 +64,7 @@
           }
         }
       ],
-      "title": "Zone 1",
+      "title": "Zone 4",
       "type": "intel-custom-panel"
     },
     {
@@ -130,7 +130,7 @@
             "uid": "PBA9FB8DAC51D59B8"
           },
           "refId": "A",
-          "topic": "loiter_status_1"
+          "topic": "loiter_status_4"
         }
       ],
       "title": "Loiter Table",
@@ -145,7 +145,7 @@
           "id": "partitionByValues",
           "options": {
             "fields": [
-              "Region 1_1 1"
+              "Region 4_1 1"
             ],
             "keepFields": true,
             "naming": {
@@ -156,7 +156,7 @@
         {
           "id": "joinByLabels",
           "options": {
-            "value": "Region 1_1 1"
+            "value": "Region 4_1 1"
           }
         },
         {
@@ -272,8 +272,8 @@
     ]
   },
   "timezone": "",
-  "title": "Zone 1",
-  "uid": "be2er9dbe8a9sd",
+  "title": "Zone 4",
+  "uid": "fecxe786edr0ge",
   "version": 1,
   "weekStart": ""
 }

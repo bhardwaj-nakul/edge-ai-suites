@@ -37,14 +37,14 @@
       },
       "id": 13,
       "options": {
-        "mqttLink": "ws://0.0.0.0:9001/mqtt",
+        "mqttLink": "ws://10.223.22.102:9001/mqtt",
         "mqttTopic": "loiter_status_3",
         "regionPosition": [
           "[{\"name\": \"Region 3_1\"}, {\"x\": 0, \"y\": 450}, {\"x\": 300, \"y\": 350}, {\"x\": 320, \"y\": 600}, {\"x\": 0, \"y\": 730}]"
         ],
         "videoHeight": 1080,
         "videoWidth": 1920,
-        "webrtcUrl": "http://0.0.0.0:8889/object_tracking_3"
+        "webrtcUrl": "http://10.223.22.102:8889/object_tracking_3"
       },
       "pluginVersion": "1.0.0",
       "targets": [
