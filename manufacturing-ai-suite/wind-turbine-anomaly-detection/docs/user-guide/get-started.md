@@ -171,7 +171,7 @@ make status
 
 1. Get into the InfluxDB* container:
 
-   > **Note**: Use `kubectl exec -it <influxdb-pod-name> -- /bin/bash` for the helm deployment
+   > **Note**: Use `kubectl exec -it <influxdb-pod-name> -n <namespace> -- /bin/bash` for the helm deployment
 
    ``` bash
     docker exec -it ia-influxdb bash
