@@ -11,7 +11,7 @@ before proceeding with the below steps.
 
     ```bash
     git clone https://github.com/open-edge-platform/edge-ai-libraries.git
-    cd edge-ai-libraries/microservices/time-series-analytics
+    cd edge-ai-libraries/microservices/time-series-analytics/docker
 
     # build
     docker compose build
