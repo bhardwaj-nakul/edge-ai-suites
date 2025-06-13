@@ -130,19 +130,7 @@ git clone https://github.com/open-edge-platform/edge-ai-suites.git
 cd edge-ai-suites/manufacturing-ai-suite/wind-turbine-anomaly-detection
 ```
 
-## Build Docker Images
-
-Navigate to the application directory and build the Docker images:
-
-> **NOTE**:
-> As a pre-requisite, please build `Time Series Analytics` microservice by referring the docs at <https://github.com/open-edge-platform/edge-ai-libraries/blob/main/microservices/time-series-analytics/docs/user-guide/get-started.md#build-docker-image> or use the pre-built
-docker image from the docker hub or internal container registry
-
-```bash
-make build # builds only data simulator (OPC-UA server and MQTT publisher) docker images
-```
-
-## Deploy with Docker Compose (Single Node)
+## Deploy with Docker Compose
 
 1. Update the following fields in `.env`:
    - `INFLUXDB_USERNAME`
@@ -154,6 +142,10 @@ make build # builds only data simulator (OPC-UA server and MQTT publisher) docke
    - `MR_MINIO_SECRET_KEY`
 
 2. Deploy the sample app, use only one of the options below:
+
+> **NOTE**: The sample app is deployed by pulling the pre-built container images of the sample app 
+> from the docker hub OR from the internal container registry (configuration to re)
+
    - **Using OPC-UA ingestion**:
      ```bash
      make up_opcua_ingestion
