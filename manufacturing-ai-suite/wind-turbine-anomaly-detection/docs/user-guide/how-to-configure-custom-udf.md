@@ -71,7 +71,7 @@ to the Model Registry microservice.
 1. The following step demonstrates how to create a sample model file from an existing model folder for uploading to the Model Registry. If you already have a model zip file, you can skip this step.
    ```bash
    cd edge-ai-suites/manufacturing-ai-suite/wind-turbine-anomaly-detection/time_series_analytics_microservice/
-   zip -r windturbine_anomaly_detector.zip udf models tick_scripts
+   zip -r windturbine_anomaly_detector.zip udfs models tick_scripts
    ```
    You can utilize the generated `windturbine_anomaly_detector.zip` absolute path as `<udf_deployment_package_path.zip>` in the next step
 
@@ -79,7 +79,7 @@ to the Model Registry microservice.
     ```bash
    curl -L -X POST "http://<HOST_IP>:32002/models" \
    -H 'Content-Type: multipart/form-data' \
-   -F 'name="Wind Turbine Anomaly Detector"' \
+   -F 'name="windturbine_anomaly_detector"' \
    -F 'version="1.0"' \
    -F 'file=@<udf_deployment_package_path.zip>;type=application/zip'
     ```
