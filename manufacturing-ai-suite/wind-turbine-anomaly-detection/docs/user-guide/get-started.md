@@ -231,7 +231,13 @@ make status
   docker logs -f <container_name> | grep -i error
   ```
 
-## Supporting Resources
+## Other Deployment options
 
-* [Overview](Overview.md)
-* [System Requirements](system-requirements.md)
+- [How to Deploy with Helm](./how-to-deploy-with-helm.md): Guide for deploying the sample application on a k8s cluster using Helm.
+- [How to Deploy with Edge Orchestrator](./how-to-deploy-with-edge-orchestrator.md): Guide for deploying the sample application using Edge Manageability Framework
+
+## Advanced setup
+
+- [How to build from source and deploy](./how-to-build-from-source.md): Guide to build from source and docker compose deployment
+- [How to configure OPC-UA/MQTT alerts](./how-to-configure-alerts.md): Guide for configuring the OPC-UA/MQTT alerts in the Time Series Analytics microservice
+- [How to configure custom UDF deployment package](./how-to-configure-custom-udf.md): Guide for deploying a customized UDF deployment package (udfs/models/tick scripts)
