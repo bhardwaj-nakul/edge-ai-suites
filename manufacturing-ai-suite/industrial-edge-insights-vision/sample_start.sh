@@ -134,7 +134,7 @@ start_piplines() {
 
     # If no arguments are provided, start all pipelines
     if [[ -z "$1" ]]; then
-        echo "No pipelines specified. Starting all pipelines..."
+        echo "No pipelines specified. Starting all pipelines"
         for pipeline in $(echo "$ALL_PIPELINES_IN_PAYLOAD" | jq -r '.[].pipeline'); do
             launch_pipeline "$pipeline"
         done
@@ -170,6 +170,10 @@ get_status() {
     else
         echo "Server reachable. HTTP Status Code: $status"
     fi
+}
+
+err(){
+    echo "$*" >&2
 }
 
 main() {
