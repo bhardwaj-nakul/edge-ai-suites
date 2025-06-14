@@ -3,6 +3,7 @@
  # Default values
  SCRIPT_DIR=$(dirname $(readlink -f "$0"))
  echo "Script directory: $SCRIPT_DIR"
+ PIPELINE_ROOT="user_defined_pipelines"  # Default root directory for pipelines
  PIPELINE="all"  # Default to running all pipelines
 
  # load environment variables from .env file if it exists
@@ -19,7 +20,7 @@ else
      echo "Error: SAMPLE_APP environment variable is not set."
      exit 1
 else
-    echo "SAMPLE_APP is set to: $SAMPLE_APP"
+    echo "Running sample app: $SAMPLE_APP"
  fi
  # check if SAMPLE_APP directory exists
  if [[ ! -d "$SAMPLE_APP" ]]; then
@@ -35,6 +36,8 @@ load_payload() {
         if command -v jq &> /dev/null; then
             PAYLOAD=$(jq '.' "$PAYLOAD_FILE")
             echo "Payload loaded successfully."
+            # find the list of pipelines in the payload
+            ALL_PIPELINES_IN_PAYLOAD=$(echo "$PAYLOAD" | jq -r '.pipelines | keys[]')
         else
             echo "jq is not installed. Cannot parse JSON payload."
             exit 1
@@ -45,9 +48,24 @@ load_payload() {
     fi
 }
 
+post_payload() {
+    local PIPELINE="$1"
+    # Post the payload to the REST server
+    echo "Posting payload to REST server at http://$HOST_IP:$REST_SERVER_PORT/$PIPELINE_ROOT/$PIPELINE"
+    # fetch all curl data for the pipeline from payload
+    if [[ -z "$PAYLOAD" ]]; then
+        echo "Error: No payload loaded. Cannot post to REST server."
+        exit 1
+    fi
+    # Use curl to post the payload
+    echo $PAYLOAD
+
+}
+
 launch_pipeline() {
     PIPELINE="$1"
     echo "Launching pipeline: $PIPELINE"
+    post_payload "$PIPELINE"
 
 }
  
@@ -99,7 +117,7 @@ main() {
     get_status
     # load the payload
     load_payload
-    
+
     # no arguments provided, start all pipelines
     if [[ -z "$1" ]]; then
         echo "No pipeline specified. Starting all pipelines..."
@@ -136,4 +154,4 @@ main() {
 }
 
 
-main "$@"    
+main "$@"
