@@ -1,4 +1,15 @@
  #!/bin/bash
+# This script is used to start pipelines in the dlstreamer-pipeline-server
+# ------------------------------------------------------------------
+	# 1. Check if DLSPS server is reachable- status API
+	# 2. Check if payload.json(json array) exists
+	# 	a. If yes, loads them as a json array, as pipeline, payloads map
+	# 3. Based on argument, start all or pipeline(s)
+	# 	a. starting a pipeline
+	# 		i. fetch the payload(s) from the loaded pipeline-payload map
+    #         ii. call POST command to DLSPS with this payload
+# ------------------------------------------------------------------
+
 
  # Default values
  SCRIPT_DIR=$(dirname $(readlink -f "$0"))
@@ -29,15 +40,16 @@ else
  fi
 
 load_payload() {
-    # Load the payload from the specified file
+    # Load all pipelines payload
     PAYLOAD_FILE="$SAMPLE_APP/payload.json"
     if [[ -f "$PAYLOAD_FILE" ]]; then
         echo "Loading payload from $PAYLOAD_FILE"
         if command -v jq &> /dev/null; then
             PAYLOAD=$(jq '.' "$PAYLOAD_FILE")
-            echo "Payload loaded successfully."
             # find the list of pipelines in the payload
-            ALL_PIPELINES_IN_PAYLOAD=$(echo "$PAYLOAD" | jq -r '.pipelines | keys[]')
+            ALL_PIPELINES_IN_PAYLOAD=$(echo "$PAYLOAD" | jq 'group_by(.pipeline) | map({pipeline: .[0].pipeline, payloads: map(.payload)})')
+            echo "Payload loaded successfully."
+            
         else
             echo "jq is not installed. Cannot parse JSON payload."
             exit 1
@@ -50,22 +62,55 @@ load_payload() {
 
 post_payload() {
     local PIPELINE="$1"
+    local PAYLOAD="$2"
     # Post the payload to the REST server
-    echo "Posting payload to REST server at http://$HOST_IP:$REST_SERVER_PORT/$PIPELINE_ROOT/$PIPELINE"
-    # fetch all curl data for the pipeline from payload
-    if [[ -z "$PAYLOAD" ]]; then
-        echo "Error: No payload loaded. Cannot post to REST server."
-        exit 1
-    fi
+    echo "Posting payload to REST server at http://$HOST_IP:$REST_SERVER_PORT/pipelines/$PIPELINE_ROOT/$PIPELINE"
     # Use curl to post the payload
-    echo $PAYLOAD
+    response=$(curl -s -w "\n%{http_code}" http://$HOST_IP:$REST_SERVER_PORT/pipelines/$PIPELINE_ROOT/$PIPELINE -X POST -H "Content-Type: application/json" -d "$PAYLOAD" )
+    
+    # Split response and status
+    body=$(echo "$response" | sed '$d')
+    status=$(echo "$response" | tail -n1)
+    if [[ "$status" -ne 200 ]]; then
+        echo "Error: Failed to post payload for pipeline '$PIPELINE'. HTTP Status Code: $status"
+        echo "Response body: $body"
+        exit 1
+    else
+        echo "Payload for pipeline '$PIPELINE' posted successfully. Response: $body"
+    fi
+}    
+    
+
+fetch_payload_and_post() {
+    local PIPELINE="$1"
+    # Extract the payload for the specific pipeline
+    # echo $ALL_PIPELINES_IN_PAYLOAD
+    echo "Extracting payload for pipeline: $PIPELINE"
+
+    # check if there are any payloads for the pipeline
+    payload_count=$(echo "$ALL_PIPELINES_IN_PAYLOAD" | jq --arg name "$PIPELINE" '[.[] | select(.pipeline == $name) | .payloads[]] | length')
+
+    if [[ "$payload_count" -eq 0 ]]; then
+        echo "No payloads found for pipeline: $PIPELINE"
+        exit 1
+    else
+        echo "Found $payload_count payload(s) for pipeline: $PIPELINE"
+        # fetch payloads for the pipeline and run each
+        echo "$ALL_PIPELINES_IN_PAYLOAD" | jq -c --arg PIPELINE "$PIPELINE" '.[] | select(.pipeline == $PIPELINE) | .payloads[]' | while read -r payload; do
+            # Use jq to format the payload            
+            echo "Payload for pipeline '$PIPELINE' $payload"
+            post_payload "$PIPELINE" "$payload"
+        # Use curl to post the payload
+        done
+    fi
 
 }
 
 launch_pipeline() {
     PIPELINE="$1"
     echo "Launching pipeline: $PIPELINE"
-    post_payload "$PIPELINE"
+    fetch_payload_and_post "$PIPELINE"
+    
 
 }
  
@@ -80,6 +125,17 @@ launch_pipeline() {
 
 
 start_piplines(){
+    # no argument-> starts all pipelines from ALL_PIPELINES_IN_PAYLOAD
+    # sequence of pipeline(s)-> starts the specified pipeline(s)
+    
+    # If no arguments are provided, start all pipelines
+    if [[ -z "$1" ]]; then
+        echo "No pipelines specified. Starting all pipelines..."
+        for pipeline in $(echo "$ALL_PIPELINES_IN_PAYLOAD" | jq -r '.[].pipeline'); do
+            launch_pipeline "$pipeline"
+        done
+        return
+    fi
     # If the next argument is not an option (doesn't start with - or --), start all the subsquent arg as pipelines
     while [[ $# -gt 0 && "$1" != "--" ]]; do
         if [[ -n "$1" && ! "$1" =~ ^- ]]; then
@@ -121,7 +177,7 @@ main() {
     # no arguments provided, start all pipelines
     if [[ -z "$1" ]]; then
         echo "No pipeline specified. Starting all pipelines..."
-        start_piplines "$@"
+        start_piplines
         return  
     fi
     
