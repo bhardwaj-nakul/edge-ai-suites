@@ -1,0 +1,52 @@
+{
+    "pallet_defect_detection_mlops": {
+        "destination": {
+            "frame": {
+                "type": "webrtc",
+                "peer-id": "<peer-str-id>"
+            }
+        },
+        "parameters": {
+            "detection-properties": {
+                "model": "/home/pipeline-server/resources/models/geti/pallet_defect_detection/deployment/Detection/model/model.xml",
+                "device": "CPU"
+            }
+        }
+    },
+    "pallet_defect_detection_gpu": {
+        "source": {
+            "uri": "file:///home/pipeline-server/resources/videos/warehouse.avi",
+            "type": "uri"
+        },
+        "destination": {
+            "frame": {
+                "type": "webrtc",
+                "peer-id": "<different-peer-str-id>"
+            }
+        },
+        "parameters": {
+            "detection-properties": {
+                "model": "/home/pipeline-server/resources/models/geti/pallet_defect_detection/deployment/Detection/model/model.xml",
+                "device": "CPU"
+            }
+        }
+    },
+    "pallet_defect_detection_cpu": {
+        "source": {
+            "uri": "file:///home/pipeline-server/resources/videos/warehouse.avi",
+            "type": "uri"
+        },
+        "destination": {
+            "frame": {
+                "type": "webrtc",
+                "peer-id": "<different-peer-str-id>"
+            }
+        },
+        "parameters": {
+            "detection-properties": {
+                "model": "/home/pipeline-server/resources/models/geti/pallet_defect_detection/deployment/Detection/model/model.xml",
+                "device": "GPU"
+            }
+        }
+    }
+}
