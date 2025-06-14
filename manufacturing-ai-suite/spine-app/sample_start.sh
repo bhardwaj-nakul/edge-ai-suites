@@ -61,25 +61,56 @@ launch_pipeline() {
  }
 
 
-start_pipeline() {
-    # check if dlstreamer-pipeline-server is running
-    if ! pgrep -x "dlstreamer-pipeline-server" > /dev/null; then
-        echo "Error: dlstreamer-pipeline-server is not running. Please start it first."
-        # exit 1
+start_piplines(){
+    # If the next argument is not an option (doesn't start with - or --), start all the subsquent arg as pipelines
+    while [[ $# -gt 0 && "$1" != "--" ]]; do
+        if [[ -n "$1" && ! "$1" =~ ^- ]]; then
+            echo "Starting pipeline: $1"
+            launch_pipeline "$1"
+            # check for a id as response from POST curl with a timeout
+            shift
+        else
+            echo "Error: Invalid argument '$1'. Expected a pipeline name."
+            usage
+            exit 1
+        fi
+    done  
+
+}
+
+get_status(){
+    response=$(curl -s -w "\n%{http_code}" http://$HOST_IP:$REST_SERVER_PORT/pipelines/status)
+    # Split response and status
+    body=$(echo "$response" | sed '$d')
+    status=$(echo "$response" | tail -n1)
+    # echo $status
+    # Check if the status is 200 OK
+    echo "Checking status of dlstreamer-pipeline-server..."
+    if [[ "$status" -ne 200 ]]; then
+        echo "Error: Failed to get status of dlstreamer-pipeline-server. HTTP Status Code: $status"
+        exit 1
+    else
+        echo "Server reachable. HTTP Status Code: $status"
     fi
+}
+
+main() {
+    # check if dlstreamer-pipeline-server is running
+    get_status
+    # load the payload
+    load_payload
+    
     # no arguments provided, start all pipelines
     if [[ -z "$1" ]]; then
         echo "No pipeline specified. Starting all pipelines..."
-        # Here you would add the command to start all pipelines, e.g.:
-        # python run_all_pipelines.py
-        return
+        start_piplines "$@"
+        return  
     fi
     
     case "$1" in
         --all)
             echo "Starting all pipelines..."
-            # Here you would add the command to start all pipelines, e.g.:
-            # python run_all_pipelines.py
+            start_piplines "$@"            
             ;;
         -p|--pipeline)
             # Check if the next argument is provided and not empty, and loop through all pipelines and launch them
@@ -87,34 +118,22 @@ start_pipeline() {
             if [[ -z "$1" ]]; then
                 echo "Error: --pipeline requires a non-empty argument."
                 usage
-                exit 1
-            fi
-            # If the next argument is not an option (doesn't start with - or --), start all the subsquent arg as pipelines
-            while [[ $# -gt 0 && "$1" != "--" ]]; do
-                if [[ -n "$1" && ! "$1" =~ ^- ]]; then
-                    echo "Starting pipeline: $1"
-                    launch_pipeline "$1"
-                    # Here you would add the command to start the specific pipeline, e.g.:
-                    # python run_pipeline.py --pipeline "$1"
-                    shift
-                else
-                    echo "Error: Invalid argument '$1'. Expected a pipeline name."
-                    usage
-                    exit 1
-                fi
-            done            
+                exit 1            
+            else
+                start_piplines "$@"
+            fi            
             ;;
         -h|--help)
             usage
             exit 0
             ;;
         *)
-            echo "Starting pipeline: $1"
-            # Here you would add the command to start the specific pipeline, e.g.:
-            # python run_pipeline.py --pipeline "$1"
+            echo "Error: Invalid option '$1'."
+            usage
+            exit 1
             ;;
     esac
 }
 
-load_payload
-start_pipeline "$@"    
+
+main "$@"    
