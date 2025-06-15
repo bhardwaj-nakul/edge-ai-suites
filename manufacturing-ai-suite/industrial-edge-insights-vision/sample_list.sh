@@ -1,12 +1,14 @@
 #!/bin/bash
-# This script is used to get status of all/specific pipeline instances in the dlstreamer-pipeline-server
+# This script is used to list all loaded pipelines in the dlstreamer-pipeline-server
 # ------------------------------------------------------------------
-# 1. Based on argument, get status of all or specific pipeline instance(s)
+# 1. Check if DLSPS server is reachable- status API
+# 2. List all loaded pipelines
 # ------------------------------------------------------------------
 
 # Default values
 SCRIPT_DIR=$(dirname $(readlink -f "$0"))
 PIPELINE_ROOT="user_defined_pipelines" # Default root directory for pipelines
+PIPELINE="all"                         # Default to running all pipelines
 
 init() {
     # load environment variables from .env file if it exists
@@ -33,36 +35,40 @@ init() {
 
 }
 
-get_status_instance() {
-    local instance_id="$1"
-    echo "Getting status of pipeline instance with ID: $instance_id"
-    # Use curl to get the status of the pipeline instance
-    response=$(curl -s -w "\n%{http_code}" http://$HOST_IP:$REST_SERVER_PORT/pipelines/$instance_id/status)
-
+list_pipelines() {
+    # initialize the sample app, load env
+    init
+    # check if dlstreamer-pipeline-server is running
+    get_status
+    # get loaded pipelines
+    response=$(curl -s -w "\n%{http_code}" http://$HOST_IP:$REST_SERVER_PORT/pipelines)
     # Split response and status
     body=$(echo "$response" | sed '$d')
     status=$(echo "$response" | tail -n1)
-
+    # Check if the status is 200 OK
     if [[ "$status" -ne 200 ]]; then
-        err "Failed to get status of pipeline instance with ID '$instance_id'. HTTP Status Code: $status"
-        echo "Response body: $body"
-        exit 0
+        err "Failed to get pipelines from dlstreamer-pipeline-server. HTTP Status Code: $status"
+        exit 1
     else
-        echo "Response body: $body"
+        echo "Loaded pipelines:"
+        echo "$body"
     fi
+
 }
 
-get_status_all() {
-    init
+get_status() {
     response=$(curl -s -w "\n%{http_code}" http://$HOST_IP:$REST_SERVER_PORT/pipelines/status)
     # Split response and status
     body=$(echo "$response" | sed '$d')
     status=$(echo "$response" | tail -n1)
+    # echo $status
+    # Check if the status is 200 OK
+    echo "Checking status of dlstreamer-pipeline-server..."
     if [[ "$status" -ne 200 ]]; then
         err "Failed to get status of dlstreamer-pipeline-server. HTTP Status Code: $status"
         exit 1
     else
-        echo "$body"
+        echo "Server reachable. HTTP Status Code: $status"
     fi
 }
 
@@ -71,46 +77,21 @@ err() {
 }
 
 usage() {
-    echo "Usage: $0 [--all] [ -i | --id <instance_id> ] [-h | --help]"
+    echo "Usage: $0 [-h | --help]"
     echo "Options:"
-    echo "  --all                           Get status of all pipelines instances (default)"
-    echo "  -i, --id <instance_id>          Get status of a specified pipeline instance(s)"
     echo "  -h, --help                      Show this help message"
 }
 
 main() {
 
-    # If no arguments provided, fetch status of all pipeline instances
+    # If no arguments provided, list all loaded pipelines
     if [[ -z "$1" ]]; then
-        echo "No instance specified. Fetching status for all."
-        get_status_all
+        echo "No pipelines specified. Stopping all pipeline instances"
+        list_pipelines
         return
     fi
 
     case "$1" in
-    --all)
-        echo "Fetching status for all pipeline instances"
-        get_status_all
-        ;;
-    -i | --id)
-        # TODO support multiple instance ids
-        # Check if the next argument is provided and not empty, and loop through all instance_ids
-        shift
-        if [[ -z "$1" ]]; then
-            err "--id requires a non-empty argument."
-            usage
-            exit 1
-        else
-            # loop over all instance ids
-            ids="$@"
-            init
-            for id in $ids; do
-                # get status of the pipeline instance with the given id
-                echo "Stopping pipeline instance with ID: $id"
-                get_status_instance "$id"
-            done
-        fi
-        ;;
     -h | --help)
         usage
         exit 0

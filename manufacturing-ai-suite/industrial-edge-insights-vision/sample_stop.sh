@@ -1,5 +1,5 @@
 #!/bin/bash
-# This script is used to start pipelines in the dlstreamer-pipeline-server
+# This script is used to stop pipeline instances in the dlstreamer-pipeline-server
 # ------------------------------------------------------------------
 # 1. Check if DLSPS server is reachable- status API
 # 2. Based on argument, stop all or specific pipeline instance
