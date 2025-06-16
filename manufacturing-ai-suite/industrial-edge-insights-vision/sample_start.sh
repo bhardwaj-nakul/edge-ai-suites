@@ -109,7 +109,7 @@ launch_pipeline() {
                 echo "Running $PAYLOAD_COPIES copies of the payloads for pipeline '$PIPELINE'."
                 for i in $(seq 0 $((PAYLOAD_COPIES - 1))); do
                     # Increment the frame path or peer-id in the payload
-                    modified_payload=$(echo "$payload" | jq --arg i "$i" 'if .destination.frame.path then .destination.frame.path += $i elif .destination.frame.peer_id then .destination.frame.peer_id += $i else . end')
+                    modified_payload=$(echo "$payload" | jq --arg i "$i" 'if .destination.frame.path then .destination.frame.path += $i elif .destination.frame["peer-id"] then .destination.frame["peer-id"] += $i else . end')
                     echo "Posting modified payload for pipeline '$PIPELINE': $modified_payload"
                     post_payload "$PIPELINE" "$modified_payload"
                 done
