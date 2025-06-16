@@ -35,15 +35,6 @@ init() {
 
 }
 
-stop_pipelines() {
-    # initialize the sample app, load env
-    init
-    # check if dlstreamer-pipeline-server is running
-    get_status
-    # get loaded pipelines
-    stop_pipeline_instances "$@"
-}
-
 delete_pipeline_instance() {
     local instance_id="$1"
     echo "Stopping pipeline instance with ID: $instance_id"
@@ -91,12 +82,20 @@ stop_pipeline_instances() {
     fi
 }
 
+stop_pipelines() {
+    # initialize the sample app, load env
+    init
+    # check if dlstreamer-pipeline-server is running
+    get_status
+    # get loaded pipelines
+    stop_pipeline_instances "$@"
+}
+
 get_status() {
     response=$(curl -s -w "\n%{http_code}" http://$HOST_IP:$REST_SERVER_PORT/pipelines/status)
     # Split response and status
     body=$(echo "$response" | sed '$d')
     status=$(echo "$response" | tail -n1)
-    # echo $status
     # Check if the status is 200 OK
     echo "Checking status of dlstreamer-pipeline-server..."
     if [[ "$status" -ne 200 ]]; then
