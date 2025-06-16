@@ -14,6 +14,7 @@
 SCRIPT_DIR=$(dirname $(readlink -f "$0"))
 PIPELINE_ROOT="user_defined_pipelines" # Default root directory for pipelines
 PIPELINE="all"                         # Default to running all pipelines
+PAYLOAD_COPIES=1                       # Default to running a single copy of the payloads
 
 init() {
     # load environment variables from .env file if it exists
@@ -21,20 +22,20 @@ init() {
         export $(grep -v -E '^\s*#' "$SCRIPT_DIR/.env" | sed -e 's/#.*$//' -e '/^\s*$/d' | xargs)
         echo "Environment variables loaded from $SCRIPT_DIR/.env"
     else
-        echo "No .env file found in $SCRIPT_DIR"
+        err "No .env file found in $SCRIPT_DIR"
         exit 1
     fi
 
     # check if SAMPLE_APP is set
     if [[ -z "$SAMPLE_APP" ]]; then
-        echo "Error: SAMPLE_APP environment variable is not set."
+        err "SAMPLE_APP environment variable is not set."
         exit 1
     else
         echo "Running sample app: $SAMPLE_APP"
     fi
     # check if SAMPLE_APP directory exists
     if [[ ! -d "$SAMPLE_APP" ]]; then
-        echo "Error: SAMPLE_APP directory $SAMPLE_APP does not exist."
+        err "SAMPLE_APP directory $SAMPLE_APP does not exist."
         exit 1
     fi
 
@@ -52,11 +53,11 @@ load_payload() {
             echo "Payload loaded successfully."
 
         else
-            echo "jq is not installed. Cannot parse JSON payload."
+            err "jq is not installed. Cannot parse JSON payload."
             exit 1
         fi
     else
-        echo "No payload file found at $PAYLOAD_FILE"
+        err "No payload file found at $PAYLOAD_FILE"
         exit 1
     fi
 }
@@ -73,7 +74,7 @@ post_payload() {
     body=$(echo "$response" | sed '$d')
     status=$(echo "$response" | tail -n1)
     if [[ "$status" -ne 200 ]]; then
-        echo "Error: Failed to post payload for pipeline '$PIPELINE'. HTTP Status Code: $status"
+        err "Failed to post payload for pipeline '$PIPELINE'. HTTP Status Code: $status"
         echo "Response body: $body"
         exit 1
     else
@@ -82,16 +83,20 @@ post_payload() {
 }
 
 fetch_payload_and_post() {
+    # Function to fetch payload for a specific pipeline and post it.
+    # If the pipeline has multiple payloads, it will post each one.
+    # If PAYLOAD_COPIES is set, it will create copies of every payload and  
+    #   increment the rtsp path or peer-id in the copied payload.
+    1
     local PIPELINE="$1"
     # Extract the payload for the specific pipeline
-    # echo $ALL_PIPELINES_IN_PAYLOAD
     echo "Extracting payload for pipeline: $PIPELINE"
 
     # check if there are any payloads for the pipeline
     payload_count=$(echo "$ALL_PIPELINES_IN_PAYLOAD" | jq --arg name "$PIPELINE" '[.[] | select(.pipeline == $name) | .payloads[]] | length')
 
     if [[ "$payload_count" -eq 0 ]]; then
-        echo "No payloads found for pipeline: $PIPELINE"
+        err "No payloads found for pipeline: $PIPELINE"
         exit 1
     else
         echo "Found $payload_count payload(s) for pipeline: $PIPELINE"
@@ -99,8 +104,18 @@ fetch_payload_and_post() {
         echo "$ALL_PIPELINES_IN_PAYLOAD" | jq -c --arg PIPELINE "$PIPELINE" '.[] | select(.pipeline == $PIPELINE) | .payloads[]' | while read -r payload; do
             # Use jq to format the payload
             echo "Payload for pipeline '$PIPELINE' $payload"
-            post_payload "$PIPELINE" "$payload"
-            # Use curl to post the payload
+            # If PAYLOAD_COPIES is set, increment the rtsp path or peer-id in the payload those number of times
+            if [[ -n "$PAYLOAD_COPIES" && "$PAYLOAD_COPIES" -gt 1 ]]; then
+                echo "Running $PAYLOAD_COPIES copies of the payloads for pipeline '$PIPELINE'."
+                for i in $(seq 0 $((PAYLOAD_COPIES - 1))); do
+                    # Increment the frame path or peer-id in the payload
+                    modified_payload=$(echo "$payload" | jq --arg i "$i" 'if .destination.frame.path then .destination.frame.path += $i elif .destination.frame.peer_id then .destination.frame.peer_id += $i else . end')
+                    echo "Posting modified payload for pipeline '$PIPELINE': $modified_payload"
+                    post_payload "$PIPELINE" "$modified_payload"
+                done
+            else
+                post_payload "$PIPELINE" "$payload"
+            fi
         done
     fi
 
@@ -113,14 +128,6 @@ launch_pipeline() {
 
 }
 
-usage() {
-    echo "Usage: $0 [--all] [-p | --pipeline <pipeline_name>] [-h | --help]"
-    echo "Options:"
-    echo "  --all                           Run all pipelines in the config (Default)"
-    echo "  -p, --pipeline <pipeline_name>  Specify the pipeline to run"
-    echo "  -h, --help                      Show this help message"
-}
-
 start_piplines() {
     # initialize the sample app, load env
     init
@@ -129,17 +136,15 @@ start_piplines() {
     # load the payload
     load_payload
 
-    # no argument-> starts all pipelines from ALL_PIPELINES_IN_PAYLOAD
-    # sequence of pipeline(s)-> starts the specified pipeline(s)
-
     # If no arguments are provided, start all pipelines
     if [[ -z "$1" ]]; then
-        echo "No pipelines specified. Starting all pipelines"
+        echo "Starting all pipelines"
         for pipeline in $(echo "$ALL_PIPELINES_IN_PAYLOAD" | jq -r '.[].pipeline'); do
             launch_pipeline "$pipeline"
         done
         return
     fi
+    # Expect other arguments to be pipeline names
     # If the next argument is not an option (doesn't start with - or --), start all the subsquent arg as pipelines
     while [[ $# -gt 0 && "$1" != "--" ]]; do
         if [[ -n "$1" && ! "$1" =~ ^- ]]; then
@@ -148,7 +153,7 @@ start_piplines() {
             # check for a id as response from POST curl with a timeout
             shift
         else
-            echo "Error: Invalid argument '$1'. Expected a pipeline name."
+            err "Invalid argument '$1'. Expected a pipeline name."
             usage
             exit 1
         fi
@@ -161,22 +166,54 @@ get_status() {
     # Split response and status
     body=$(echo "$response" | sed '$d')
     status=$(echo "$response" | tail -n1)
-    # echo $status
     # Check if the status is 200 OK
     echo "Checking status of dlstreamer-pipeline-server..."
     if [[ "$status" -ne 200 ]]; then
-        echo "Error: Failed to get status of dlstreamer-pipeline-server. HTTP Status Code: $status"
+        err "Failed to get status of dlstreamer-pipeline-server. HTTP Status Code: $status"
         exit 1
     else
         echo "Server reachable. HTTP Status Code: $status"
     fi
 }
 
-err(){
-    echo "$*" >&2
+err() {
+    echo "ERROR: $*" >&2
+}
+
+usage() {
+    echo "Usage: $0 [--all] [-p | --pipeline <pipeline_name>] [ -n | --payload-copies ] [-h | --help]"
+    echo "Options:"
+    echo "  --all                           Run all pipelines in the config (Default)"
+    echo "  -p, --pipeline <pipeline_name>  Specify the pipeline to run"
+    echo "  -n, --payload-copies            Run copies of the payloads for pipeline(s)."
+    echo "                                  Any frame rtsp path or webrtc peer-id in payload will be incremented."
+    echo "  -h, --help                      Show this help message"
 }
 
 main() {
+
+    # Check for -n in arg list and set PAYLOAD_COPIES, then remove it from args
+    args=("$@")
+    for i in "${!args[@]}"; do
+        if [[ "${args[i]}" == "-n" || "${args[i]}" == "--payload-copies" ]]; then
+            # If -n is found, check if the next argument is provided and not empty
+            if [[ -z "${args[((i + 1))]}" ]]; then
+                err "--payload-copies requires a non-empty argument."
+                usage
+                exit 1
+            else
+                PAYLOAD_COPIES="${args[((i + 1))]}"
+                echo "Running $PAYLOAD_COPIES copies of the payloads."
+                # Remove -n and the next argument from the args array
+                unset 'args[i]'
+                unset 'args[i+1]'
+                break
+            fi
+        fi
+    done
+
+    # Reconstruct the arguments from the modified array
+    set -- "${args[@]}"
 
     # no arguments provided, start all pipelines
     if [[ -z "$1" ]]; then
@@ -185,16 +222,17 @@ main() {
         return
     fi
 
+    # Check remaining arguments
     case "$1" in
     --all)
         echo "Starting all pipelines..."
-        start_piplines "$@"
+        start_piplines
         ;;
     -p | --pipeline)
         # Check if the next argument is provided and not empty, and loop through all pipelines and launch them
         shift
         if [[ -z "$1" ]]; then
-            echo "Error: --pipeline requires a non-empty argument."
+            err "--pipeline requires a non-empty argument."
             usage
             exit 1
         else
@@ -206,7 +244,7 @@ main() {
         exit 0
         ;;
     *)
-        echo "Error: Invalid option '$1'."
+        err "Invalid option '$1'."
         usage
         exit 1
         ;;
