@@ -82,13 +82,13 @@ post_payload() {
     fi
 }
 
-fetch_payload_and_post() {
+launch_pipeline() {
     # Function to fetch payload for a specific pipeline and post it.
     # If the pipeline has multiple payloads, it will post each one.
-    # If PAYLOAD_COPIES is set, it will create copies of every payload and  
+    # If PAYLOAD_COPIES is set, it will create copies of every payload and
     #   increment the rtsp path or peer-id in the copied payload.
-    1
     local PIPELINE="$1"
+    echo "Launching pipeline: $PIPELINE"
     # Extract the payload for the specific pipeline
     echo "Extracting payload for pipeline: $PIPELINE"
 
@@ -118,13 +118,6 @@ fetch_payload_and_post() {
             fi
         done
     fi
-
-}
-
-launch_pipeline() {
-    PIPELINE="$1"
-    echo "Launching pipeline: $PIPELINE"
-    fetch_payload_and_post "$PIPELINE"
 
 }
 
