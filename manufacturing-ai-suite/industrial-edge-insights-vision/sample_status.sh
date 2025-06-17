@@ -82,7 +82,6 @@ main() {
 
     # If no arguments provided, fetch status of all pipeline instances
     if [[ -z "$1" ]]; then
-        echo "No instance specified. Fetching status for all."
         get_status_all
         return
     fi

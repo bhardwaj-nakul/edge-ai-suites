@@ -86,7 +86,6 @@ main() {
 
     # If no arguments provided, list all loaded pipelines
     if [[ -z "$1" ]]; then
-        echo "No pipelines specified. Stopping all pipeline instances"
         list_pipelines
         return
     fi
