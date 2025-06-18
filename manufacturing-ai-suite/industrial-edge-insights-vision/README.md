@@ -14,9 +14,10 @@ You only need to update the install.sh to get the required artifcats downloaded,
             models/
             videos/
         payload.json
-        docker-compose.yml
     
     .env_app_name
+    docker-compose.yml
+    
     sample_list.sh
     sample_start.sh
     sample_status.sh
