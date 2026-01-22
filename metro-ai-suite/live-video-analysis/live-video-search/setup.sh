@@ -57,15 +57,22 @@ elif [ "$1" = "--start-rtsp-test" ]; then
     else
         set -- "--start-rtsp-test"
     fi
+elif [ "$1" = "--start-usb-camera" ]; then
+    if [ -n "$2" ]; then
+        set -- "--start-usb-camera" "$2"
+    else
+        set -- "--start-usb-camera"
+    fi
 fi
 
 if [ "$#" -eq 0 ] || ([ "$#" -eq 1 ] && [ "$1" = "--help" ]); then
     echo -e "-----------------------------------------------------------------"
-    echo -e "${YELLOW}USAGE: ${GREEN}source setup.sh ${BLUE}[--setenv | --down | --clean-data | --help | --start | --start-rtsp-test ${GREEN}[config]${BLUE}]"
+    echo -e "${YELLOW}USAGE: ${GREEN}source setup.sh ${BLUE}[--setenv | --down | --clean-data | --help | --start | --start-rtsp-test | --start-usb-camera ${GREEN}[config]${BLUE}]"
     echo -e "${YELLOW}"
     echo -e "  --setenv:     Set environment variables without starting containers"
     echo -e "  --start:      Configure and bring up Live Video Search application"
     echo -e "  --start-rtsp-test: Start app plus RTSP test stream (looped sample video)"
+    echo -e "  --start-usb-camera: Start app with USB camera input (/dev/video0)"
     echo -e "  --down:       Bring down all docker containers for the application"
     echo -e "  --clean-data: Bring down containers and remove docker volumes"
     echo -e "  --help:       Show this help message"
@@ -75,7 +82,7 @@ if [ "$#" -eq 0 ] || ([ "$#" -eq 1 ] && [ "$1" = "--help" ]); then
 elif [ "$#" -gt 2 ]; then
     echo -e "${RED}ERROR: Too many arguments provided.${NC}"
     return 1
-elif [ "$1" != "--help" ] && [ "$1" != "--start" ] && [ "$1" != "--start-rtsp-test" ] && [ "$1" != "--setenv" ] && [ "$1" != "--down" ] && [ "$1" != "--clean-data" ]; then
+elif [ "$1" != "--help" ] && [ "$1" != "--start" ] && [ "$1" != "--start-rtsp-test" ] && [ "$1" != "--start-usb-camera" ] && [ "$1" != "--setenv" ] && [ "$1" != "--down" ] && [ "$1" != "--clean-data" ]; then
     echo -e "${RED}Unknown option: $1 ${NC}"
     return 1
 elif [ "$#" -eq 2 ] && [ "$2" != "config" ]; then
@@ -201,13 +208,15 @@ export FRIGATE_BASE_URL=${FRIGATE_BASE_URL:-http://frigate-vms:5000}
 export NVR_API_BASE_URL=${NVR_API_BASE_URL:-http://nvr-event-router:8000}
 
 
-if [ "$1" = "--start" ] || [ "$1" = "--start-rtsp-test" ]; then
+if [ "$1" = "--start" ] || [ "$1" = "--start-rtsp-test" ] || [ "$1" = "--start-usb-camera" ]; then
     export HOST_IP=$(get_host_ip)
     if [ "$1" = "--start-rtsp-test" ]; then
         cp "${CONFIG_DIR}/frigate-config/config-rtsp.yml" "${CONFIG_DIR}/frigate-config/config.yml"
         if ! docker network inspect live-video-network >/dev/null 2>&1; then
             docker network create live-video-network
         fi
+    elif [ "$1" = "--start-usb-camera" ]; then
+        cp "${CONFIG_DIR}/frigate-config/config-usb.yml" "${CONFIG_DIR}/frigate-config/config.yml"
     fi
 fi
 
@@ -219,6 +228,8 @@ fi
 APP_COMPOSE_FILE="-f docker/compose.search.yaml -f docker/compose.smart-nvr.yaml -f docker/compose.telemetry.yaml"
 if [ "$1" = "--start-rtsp-test" ]; then
     APP_COMPOSE_FILE="$APP_COMPOSE_FILE -f docker/compose.rtsp-test.yaml"
+elif [ "$1" = "--start-usb-camera" ]; then
+    APP_COMPOSE_FILE="$APP_COMPOSE_FILE -f docker/compose.usb-camera.yaml"
 fi
 FINAL_ARG="up -d" && [ "$2" = "config" ] && FINAL_ARG="config"
 DOCKER_COMMAND="docker compose $APP_COMPOSE_FILE $FINAL_ARG"

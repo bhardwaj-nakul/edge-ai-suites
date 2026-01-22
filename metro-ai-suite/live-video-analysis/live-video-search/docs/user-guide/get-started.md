@@ -115,6 +115,30 @@ Access:
 - VSS UI: `http://<host-ip>:12345`
 - Smart NVR UI: `http://<host-ip>:7860`
 
+## USB Camera (Direct Frigate Input)
+
+Use a local USB camera (UVC/V4L2) as the Frigate input without creating an RTSP stream.
+
+1. Plug in your USB camera and confirm the device node exists (typically `/dev/video0`).
+2. Start the stack with the USB camera override:
+
+    ```bash
+    source setup.sh --start-usb-camera
+    ```
+
+3. Open Frigate UI at `http://<host-ip>:5000` and select the `usb-camera` feed.
+
+Notes:
+
+- If your camera is not `/dev/video0`, update `config/frigate-config/config-usb.yml` and/or set `USB_CAMERA_DEVICE` before starting:
+
+    ```bash
+    export USB_CAMERA_DEVICE=/dev/video2
+    source setup.sh --start-usb-camera
+    ```
+
+- You can tune resolution and frame rate in `config/frigate-config/config-usb.yml` under `input_args`.
+
 ## How to Use Live Video Search
 
 This workflow assumes the stack is running and cameras are configured in Frigate.

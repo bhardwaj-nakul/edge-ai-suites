@@ -1,0 +1,44 @@
+mqtt:
+  enabled: true
+  host: mqtt-broker
+  port: 1883
+  topic_prefix: frigate
+  client_id: frigate
+  user: '{FRIGATE_MQTT_USER}'
+  password: '{FRIGATE_MQTT_PASSWORD}'
+
+logger:
+  default: info
+
+record:
+  enabled: true
+  retain:
+    days: 7
+    mode: all
+
+cameras:
+  usb-camera:
+    ffmpeg:
+      inputs:
+        - path: /dev/video0
+          input_args: -f v4l2 -input_format mjpeg -video_size 1280x720 -framerate 30
+          roles:
+            - detect
+            - record
+    detect:
+      enabled: true
+      width: 1280
+      height: 720
+      fps: 5
+    record:
+      enabled: true
+      retain:
+        days: 1
+    objects:
+      track: [person, vehicle]
+    snapshots:
+      enabled: true
+      retain:
+        default: 1
+
+version: 0.15-1
