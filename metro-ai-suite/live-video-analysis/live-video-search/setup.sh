@@ -179,11 +179,57 @@ export AGGREGATION_INITIAL_K=${AGGREGATION_INITIAL_K:-1000}
 export AGGREGATION_CONTEXT_SEEK_OFFSET_SECONDS=${AGGREGATION_CONTEXT_SEEK_OFFSET_SECONDS:-0}
 
 # Device selection (CPU/GPU for embeddings)
-export VDMS_DATAPREP_DEVICE=${VDMS_DATAPREP_DEVICE:-CPU}
+export VDMS_DATAPREP_DEVICE=${VDMS_DATAPREP_DEVICE:-""}
+export EMBEDDING_DEVICE=${EMBEDDING_DEVICE:-""}
+
+if [ -n "$EMBEDDING_DEVICE" ] && [ -z "$VDMS_DATAPREP_DEVICE" ]; then
+    export VDMS_DATAPREP_DEVICE="$EMBEDDING_DEVICE"
+elif [ -z "$EMBEDDING_DEVICE" ]; then
+    export EMBEDDING_DEVICE="$VDMS_DATAPREP_DEVICE"
+fi
+
 if [ "$ENABLE_EMBEDDING_GPU" = true ]; then
     export VDMS_DATAPREP_DEVICE=GPU
+    export EMBEDDING_DEVICE=GPU
 fi
-export EMBEDDING_DEVICE=${EMBEDDING_DEVICE:-$VDMS_DATAPREP_DEVICE}
+
+configure_device() {
+    local device=${1:-"CPU"}
+
+    echo -e "${BLUE}Configuring device for embedding + dataprep: ${YELLOW}${device}${NC}"
+
+    if [[ "${device}" == GPU* ]]; then
+        echo -e "${YELLOW}⚙️  Setting up GPU configuration...${NC}"
+
+        if ! lspci | grep -i "vga.*intel" > /dev/null 2>&1; then
+            echo -e "${RED}Warning: No Intel GPU detected. GPU mode may not work properly.${NC}"
+        else
+            echo -e "${GREEN}Intel GPU detected${NC}"
+        fi
+
+        if [[ ! -d "/dev/dri" ]]; then
+            echo -e "${RED}Warning: /dev/dri not found. GPU acceleration may not be available.${NC}"
+        else
+            echo -e "${GREEN}DRI devices found for GPU acceleration${NC}"
+        fi
+
+        export VDMS_DATAPREP_DEVICE="${device}"
+        export EMBEDDING_DEVICE="${device}"
+        export SDK_USE_OPENVINO=true
+    else
+        echo -e "${BLUE}CPU mode configured for embedding + dataprep${NC}"
+        export VDMS_DATAPREP_DEVICE="${device}"
+        export EMBEDDING_DEVICE="${device}"
+    fi
+}
+
+if [ -z "$VDMS_DATAPREP_DEVICE" ] && [ -z "$EMBEDDING_DEVICE" ]; then
+    configure_device "CPU"
+elif [[ "${VDMS_DATAPREP_DEVICE}" == GPU* ]] || [[ "${EMBEDDING_DEVICE}" == GPU* ]]; then
+    configure_device "GPU"
+else
+    configure_device "CPU"
+fi
 
 # YOLOX models
 export YOLOX_MODELS_VOLUME_NAME=${YOLOX_MODELS_VOLUME_NAME:-vdms-yolox-models}

@@ -83,6 +83,16 @@ You can customize the application behavior by setting the following optional env
     export ENABLE_EMBEDDING_GPU=true
     ```
 
+3. To explicitly select devices for DataPrep and the Multimodal Embedding service, set:
+
+    ```bash
+    # CPU or GPU
+    export VDMS_DATAPREP_DEVICE=GPU
+    export EMBEDDING_DEVICE=GPU
+    ```
+
+    If unset, both default to CPU. Setting `ENABLE_EMBEDDING_GPU=true` forces both to GPU.
+
 ## Configure Cameras
 
 Edit `config/frigate-config/config.yml` to add or update camera inputs. This is the active Frigate configuration used at startup.
