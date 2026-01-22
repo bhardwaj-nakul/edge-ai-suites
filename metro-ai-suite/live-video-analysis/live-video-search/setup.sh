@@ -30,28 +30,8 @@ get_host_ip() {
     echo "$HOST_IP"
 }
 
-configure_scenescape_setup() {
-    if [ "${NVR_SCENESCAPE}" = "True" ] || [ "${NVR_SCENESCAPE}" = "true" ]; then
-        cp "${CONFIG_DIR}/frigate-config/config-scenescape.yml" "${CONFIG_DIR}/frigate-config/config.yml"
-        local host_ip=$(get_host_ip)
-        sed -i "s/{RTSP_STREAM_IP}/${host_ip}/g" "${CONFIG_DIR}/frigate-config/config.yml"
-    else
-        cp "${CONFIG_DIR}/frigate-config/config-default.yml" "${CONFIG_DIR}/frigate-config/config.yml"
-    fi
-}
-
-configure_genai_setup() {
-    if [ "${NVR_GENAI}" = "True" ] || [ "${NVR_GENAI}" = "true" ]; then
-        if [ -f "${CONFIG_DIR}/frigate-config/config.yml" ]; then
-            sed -i '/^\s*genai:/!b;n;s/enabled: false/enabled: true/' "${CONFIG_DIR}/frigate-config/config.yml"
-            sed -i '/^\s*detect:/!b;n;s/enabled: false/enabled: true/' "${CONFIG_DIR}/frigate-config/config.yml"
-        fi
-    fi
-}
-
 stop_containers() {
     echo -e "${YELLOW}Bringing down the Docker containers... ${NC}"
-    export LIVE_VIDEO_DUMP_DIR=${LIVE_VIDEO_DUMP_DIR:-${LIVE_SEARCH_ROOT}/data/live-recordings}
     docker compose \
       -f docker/compose.search.yaml \
       -f docker/compose.smart-nvr.yaml \
@@ -71,14 +51,21 @@ if [ "$1" = "--start" ]; then
     else
         set -- "--start"
     fi
+elif [ "$1" = "--start-rtsp-test" ]; then
+    if [ -n "$2" ]; then
+        set -- "--start-rtsp-test" "$2"
+    else
+        set -- "--start-rtsp-test"
+    fi
 fi
 
 if [ "$#" -eq 0 ] || ([ "$#" -eq 1 ] && [ "$1" = "--help" ]); then
     echo -e "-----------------------------------------------------------------"
-    echo -e "${YELLOW}USAGE: ${GREEN}source setup.sh ${BLUE}[--setenv | --down | --clean-data | --help | --start ${GREEN}[config]${BLUE}]"
+    echo -e "${YELLOW}USAGE: ${GREEN}source setup.sh ${BLUE}[--setenv | --down | --clean-data | --help | --start | --start-rtsp-test ${GREEN}[config]${BLUE}]"
     echo -e "${YELLOW}"
     echo -e "  --setenv:     Set environment variables without starting containers"
     echo -e "  --start:      Configure and bring up Live Video Search application"
+    echo -e "  --start-rtsp-test: Start app plus RTSP test stream (looped sample video)"
     echo -e "  --down:       Bring down all docker containers for the application"
     echo -e "  --clean-data: Bring down containers and remove docker volumes"
     echo -e "  --help:       Show this help message"
@@ -88,7 +75,7 @@ if [ "$#" -eq 0 ] || ([ "$#" -eq 1 ] && [ "$1" = "--help" ]); then
 elif [ "$#" -gt 2 ]; then
     echo -e "${RED}ERROR: Too many arguments provided.${NC}"
     return 1
-elif [ "$1" != "--help" ] && [ "$1" != "--start" ] && [ "$1" != "--setenv" ] && [ "$1" != "--down" ] && [ "$1" != "--clean-data" ]; then
+elif [ "$1" != "--help" ] && [ "$1" != "--start" ] && [ "$1" != "--start-rtsp-test" ] && [ "$1" != "--setenv" ] && [ "$1" != "--down" ] && [ "$1" != "--clean-data" ]; then
     echo -e "${RED}Unknown option: $1 ${NC}"
     return 1
 elif [ "$#" -eq 2 ] && [ "$2" != "config" ]; then
@@ -101,10 +88,6 @@ elif [ "$1" = "--clean-data" ]; then
     stop_containers || return 1
     echo -e "${YELLOW}Removing Docker volumes created by the application... ${NC}"
     docker volume rm docker_minio_data docker_pg_data docker_vdms_db docker_data_prep docker_mosquitto_data docker_mosquitto_log docker_redis_data 2>/dev/null || true
-    if [ -d "${LIVE_SEARCH_ROOT}/data/live-recordings" ]; then
-        echo -e "${YELLOW}Removing live recordings at ${LIVE_SEARCH_ROOT}/data/live-recordings... ${NC}"
-        sudo rm -rf "${LIVE_SEARCH_ROOT}/data/live-recordings"
-    fi
     echo -e "${GREEN}Clean operation completed successfully! ${NC}"
     return 0
 fi
@@ -120,10 +103,6 @@ export REGISTRY="${REGISTRY_URL}${PROJECT_NAME}"
 export USER_GROUP_ID=$(id -g)
 export VIDEO_GROUP_ID=$(getent group video | awk -F: '{printf "%s\n", $3}')
 export RENDER_GROUP_ID=$(getent group render | awk -F: '{printf "%s\n", $3}')
-
-# Live video dump directory used by both Smart NVR and VSS watcher
-export LIVE_VIDEO_DUMP_DIR=${LIVE_VIDEO_DUMP_DIR:-${LIVE_SEARCH_ROOT}/data/live-recordings}
-mkdir -p "${LIVE_VIDEO_DUMP_DIR}"
 
 # VSS service endpoints
 export PM_HOST_PORT=${PM_HOST_PORT:-3001}
@@ -158,11 +137,6 @@ export VS_HOST=${VS_HOST:-video-search}
 export VS_ENDPOINT=http://${VS_HOST}:8000
 export VDMS_PIPELINE_MANAGER_UPLOAD=http://${PM_HOST}:3000
 export VS_INDEX_NAME=${VS_INDEX_NAME:-video_frame_embeddings}
-export VS_WATCHER_DIR=${VS_WATCHER_DIR:-/tmp/watcher-dir}
-export VS_DELETE_PROCESSED_FILES=${VS_DELETE_PROCESSED_FILES:-true}
-export VS_INITIAL_DUMP=${VS_INITIAL_DUMP:-false}
-export VS_WATCH_DIRECTORY_RECURSIVE=${VS_WATCH_DIRECTORY_RECURSIVE:-true}
-export VS_DEBOUNCE_TIME=${VS_DEBOUNCE_TIME:-1}
 
 # VDMS / Embeddings
 export VDMS_VDB_HOST_PORT=${VDMS_VDB_HOST_PORT:-55555}
@@ -215,21 +189,26 @@ if [ -z "${MQTT_USER}" ] || [ -z "${MQTT_PASSWORD}" ]; then
 fi
 export MQTT_USER=${MQTT_USER}
 export MQTT_PASSWORD=${MQTT_PASSWORD}
-export NVR_GENAI=${NVR_GENAI:-false}
-export NVR_SCENESCAPE=${NVR_SCENESCAPE:-false}
 export VLM_SERVING_IP=${VLM_SERVING_IP:-${PM_HOST}}
 export VLM_SERVING_PORT=${VLM_SERVING_PORT:-9766}
-export VSS_SEARCH_URL=${VSS_SEARCH_URL:-http://${PM_HOST}:3000}
-export VSS_SUMMARY_URL=${VSS_SUMMARY_URL:-http://${PM_HOST}:3000}
-export VSS_SUMMARY_IP=${VSS_SUMMARY_IP:-${HOST_IP}}
+export VSS_SEARCH_IP=${VSS_SEARCH_IP:-nginx}
+export VSS_SUMMARY_IP=${VSS_SUMMARY_IP:-nginx}
+export VSS_SEARCH_PORT=${VSS_SEARCH_PORT:-80}
+export VSS_SUMMARY_PORT=${VSS_SUMMARY_PORT:-80}
+export VSS_SEARCH_URL=http://${VSS_SEARCH_IP}:${VSS_SEARCH_PORT}
+export VSS_SUMMARY_URL=http://${VSS_SUMMARY_IP}:${VSS_SUMMARY_PORT}
 export FRIGATE_BASE_URL=${FRIGATE_BASE_URL:-http://frigate-vms:5000}
 export NVR_API_BASE_URL=${NVR_API_BASE_URL:-http://nvr-event-router:8000}
 
 
-if [ "$1" = "--start" ]; then
+if [ "$1" = "--start" ] || [ "$1" = "--start-rtsp-test" ]; then
     export HOST_IP=$(get_host_ip)
-    configure_scenescape_setup || return 1
-    configure_genai_setup || return 1
+    if [ "$1" = "--start-rtsp-test" ]; then
+        cp "${CONFIG_DIR}/frigate-config/config-rtsp.yml" "${CONFIG_DIR}/frigate-config/config.yml"
+        if ! docker network inspect live-video-network >/dev/null 2>&1; then
+            docker network create live-video-network
+        fi
+    fi
 fi
 
 if [ "$1" = "--setenv" ]; then
@@ -238,6 +217,9 @@ if [ "$1" = "--setenv" ]; then
 fi
 
 APP_COMPOSE_FILE="-f docker/compose.search.yaml -f docker/compose.smart-nvr.yaml -f docker/compose.telemetry.yaml"
+if [ "$1" = "--start-rtsp-test" ]; then
+    APP_COMPOSE_FILE="$APP_COMPOSE_FILE -f docker/compose.rtsp-test.yaml"
+fi
 FINAL_ARG="up -d" && [ "$2" = "config" ] && FINAL_ARG="config"
 DOCKER_COMMAND="docker compose $APP_COMPOSE_FILE $FINAL_ARG"
 

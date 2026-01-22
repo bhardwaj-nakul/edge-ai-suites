@@ -37,4 +37,4 @@ The software requirements to install the sample application are provided in othe
 ## Related Requirements
 
 - Smart NVR requirements: [System Requirements](../../../../smart-nvr/docs/user-guide/system-requirements.md)
-- VSS requirements (public): [Video Search and Summarization Docs](https://github.com/open-edge-platform/edge-ai-libraries/blob/main/sample-applications/video-search-and-summarization/docs/user-guide/system-requirements.md)
+- VSS requirements (public): [System Requirements](https://github.com/open-edge-platform/edge-ai-libraries/blob/main/sample-applications/video-search-and-summarization/docs/user-guide/system-requirements.md)

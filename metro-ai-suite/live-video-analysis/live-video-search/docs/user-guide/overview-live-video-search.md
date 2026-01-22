@@ -1,6 +1,6 @@
 # Live Video Search Overview
 
-Live Video Search is a Metro AI Suite sample that **bridges Smart NVR ingestion with VSS Search**. It captures live events from cameras, writes clips to a shared dump directory, and makes them searchable via natural‑language queries and time‑range filters.
+Live Video Search is a Metro AI Suite sample that adapts the VSS pipeline for semantic search on live Frigate streams. It ingests live camera streams, indexes video segments with embeddings and timestamped camera metadata, and lets users select cameras, time ranges, and free‑text queries to retrieve ranked, playable clips with confidence scores while surfacing live system metrics.
 
 ## What It Enables
 
@@ -32,6 +32,6 @@ Live Video Search combines two existing stacks:
 
 ## Key Behaviors
 
-- **Shared dump directory** ensures VSS Search indexes the same clips that Smart NVR produces.
+- **Smart NVR‑initiated ingestion** sends selected clips directly to VSS Search.
 - **Time‑range filters** reduce search scope and improve relevance.
 - **Telemetry** provides real‑time system metrics in the VSS UI.

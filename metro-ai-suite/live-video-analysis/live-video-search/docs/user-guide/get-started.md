@@ -2,7 +2,7 @@
 
 ## Overview
 
-Live Video Search is a Metro AI Suite sample that **bridges Smart NVR ingestion with VSS Search**. It captures live events from cameras, writes clips to a shared dump directory, and makes them searchable via natural‑language queries and time‑range filters. This guide starts the **Live Video Search** stack (Smart NVR + VSS Search) using Docker Compose.
+Live Video Search is a Metro AI Suite sample that adapts the VSS pipeline for semantic search on live Frigate streams. It ingests live camera streams, indexes video segments with embeddings and timestamped camera metadata, and lets users select cameras, time ranges, and free‑text queries to retrieve ranked, playable clips with confidence scores while surfacing live system metrics. This guide starts the **Live Video Search** stack (Smart NVR + VSS Search) using Docker Compose.
 
 ## Prerequisites
 
@@ -20,7 +20,6 @@ live-video-search/
 │   ├── telemetry/                 # Telemetry collector configs
 │   └── nginx.conf                 # NGINX reverse proxy
 ├── data/                           # Runtime data (recordings, caches)
-│   └── live-recordings/           # Shared recordings directory
 ├── docker/                         # Compose files
 │   ├── compose.search.yaml        # VSS Search stack
 │   ├── compose.smart-nvr.yaml      # Smart NVR stack
@@ -40,7 +39,7 @@ Before running the application, you need to set several environment variables:
 
     ```bash
     export REGISTRY_URL=intel
-    export TAG=1.3.1
+    export TAG=rc2026.1.3
     ```
 
 2. **Set required credentials for some services**:
@@ -67,16 +66,7 @@ Before running the application, you need to set several environment variables:
 
 You can customize the application behavior by setting the following optional environment variables before running the setup script:
 
-1. **Configure directory shared by Smart NVR and VSS watcher**:
-
-    By default, Smart NVR writes recorded clips to `live-video-search/data/live-recordings/`, which is also monitored by the VSS Search‑MS watcher for new content. To change this path, set the `LIVE_VIDEO_DUMP_DIR` environment variable before running the setup script:
-
-    ```bash
-    # Override live recordings directory shared by Smart NVR and VSS watcher
-    export LIVE_VIDEO_DUMP_DIR=/path/to/live/recordings
-    ```
-
-2. **Control the frame extraction interval (Video Search Mode)**:
+1. **Control the frame extraction interval (Video Search Mode)**:
 
     The DataPrep microservice samples frames from uploaded videos according to the `FRAME_INTERVAL` environment variable. Set this variable before running `source setup.sh --search` to control how often frames are selected for processing.
 
@@ -86,24 +76,12 @@ You can customize the application behavior by setting the following optional env
 
     In the example above, DataPrep processes every fifteenth frame: each selected frame (optionally after object detection) is converted into embeddings and stored in the vector database. Lower values improve recall at the cost of higher compute and storage usage, while higher values reduce processing load but may skip important frames. If you do not set this variable, the service falls back to its configured default.
 
-3. To use GPU acceleration for embedding generation, set the following variable before running the setup script:
+2. To use GPU acceleration for embedding generation, set the following variable before running the setup script:
 
     ```bash
     # Enable GPU embeddings
     export ENABLE_EMBEDDING_GPU=true
     ```
-
-4. **Toggle GenAI features in Smart NVR**:
-    By default, GenAI features in Smart NVR are disabled. To enable them, set the following environment variables before running the setup script:
-
-    ```bash
-    # Enable GenAI features in Smart NVR
-    export NVR_GENAI=false
-    export NVR_SCENESCAPE=false
-    ```
-
-
-
 
 ## Configure Cameras
 
@@ -117,6 +95,21 @@ For reference, see the default template in `config/frigate-config/config-default
 source setup.sh --start
 ```
 
+## RTSP Test Stream (Out-of-Box)
+
+Use the bundled sample video to spin up a looped RTSP stream and point Frigate at it.
+
+1. Start the stack with the RTSP test services:
+
+    ```bash
+    source setup.sh --start-rtsp-test
+    ```
+
+2. Confirm the sample stream is live in Frigate:
+    - Open `http://<host-ip>:5000` and select the `rtsp-garage` camera.
+
+This uses `config/frigate-config/config-rtsp.yml` and publishes `config/videos/garage.mp4` over RTSP via `mediamtx`. Replace the RTSP URL in `config/frigate-config/config.yml` with your real camera streams when moving to production.
+
 Access:
 
 - VSS UI: `http://<host-ip>:12345`
@@ -126,12 +119,11 @@ Access:
 
 This workflow assumes the stack is running and cameras are configured in Frigate.
 
-### Step 1: Validate Ingestion
+### Step 1: Add Clips to Search
 
 1. Open Smart NVR UI at `http://<host-ip>:7860`.
-2. Confirm camera streams are live and clips are being recorded.
-3. Verify the shared recordings directory contains new clips:
-    - Default: `live-video-search/data/live-recordings/`
+2. Confirm camera streams are live.
+3. Choose a camera and time range, then select **Add to Search**.
 
 ### Step 2: Run a Search Query
 
@@ -154,7 +146,7 @@ Search results include clip timestamps, confidence scores, and metadata. Use the
 
 ### Tips
 
-- If results are empty, confirm new clips exist in the shared recordings path.
+- If results are empty, confirm you added clips from Smart NVR UI.
 - Narrow time ranges improve query latency and relevance.
 - If telemetry is not visible, check that `vss-collector` is running.
 
@@ -172,14 +164,12 @@ source setup.sh --clean-data
 
 Telemetry is enabled for Live Video Search and shows live system metrics in the VSS UI when the collector is connected.
 
-
 ## Troubleshooting
 
 ### No clips in search results
 
-- Confirm Smart NVR is writing to the shared dump directory.
-- Check `LIVE_VIDEO_DUMP_DIR` is the same for Frigate and Search‑MS watcher.
-- Verify new files exist under `data/live-recordings/`.
+- Confirm you added clips via **Add to Search** in Smart NVR UI.
+- Verify `VSS_SEARCH_URL` in `setup.sh` points to the internal endpoint.
 
 ### Search results empty after changing model
 
@@ -187,7 +177,7 @@ Telemetry is enabled for Live Video Search and shows live system metrics in the 
   - `source setup.sh --clean-data`
   - `source setup.sh --start`
 
-### Telemetry not showing
+### Telemetry information is not being displayed
 
 - Verify `vss-collector` is running.
 - Check Pipeline Manager status: `/manager/metrics/status`.
@@ -201,11 +191,6 @@ Telemetry is enabled for Live Video Search and shows live system metrics in the 
 
 - Check Frigate logs for camera connection errors.
 - Confirm RTSP sources are reachable and credentials are valid.
-
-### Permission errors on recordings
-
-- If Search‑MS cannot delete files, ensure the recordings directory is writable by the container.
-- Remove and recreate recordings directory after switching user mode.
 
 ## References
 

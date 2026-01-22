@@ -7,18 +7,10 @@ mqtt:
   user: '{FRIGATE_MQTT_USER}'
   password: '{FRIGATE_MQTT_PASSWORD}'
 
-genai:
-  enabled: false
-  provider: openai
-  model: Qwen/Qwen2.5-VL-3B-Instruct
 
 logger:
   default: info
 
-
-semantic_search:
-  enabled: true
-  reindex: false
 
 record:
   enabled: true

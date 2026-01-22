@@ -8,13 +8,10 @@ This document describes the end‑to‑end architecture of Live Video Search and
 graph TD
   A[Camera Streams] -->|RTSP/Video Feeds| B[Frigate NVR]
   B -->|Event Clips + Metadata| C[NVR Event Router]
-  B -->|Recorded Clips| D[Live Recordings Directory]
-  C -->|Event Metadata| D
-
-  D -->|Watcher Directory| E[VSS Search‑MS]
+  C -->|Add to Search| H[Pipeline Manager]
+  H --> E[VSS Search‑MS]
   E --> F[VDMS DataPrep]
   F --> G[VDMS VectorDB]
-  E --> H[Pipeline Manager]
   H --> I[VSS UI]
 
   C --> J[Smart NVR UI]
@@ -26,14 +23,14 @@ graph TD
 
 1. **Ingestion**: Cameras stream into Frigate, which records clips and publishes events via MQTT.
 2. **Event Routing**: NVR Event Router receives events and associates clips with camera metadata.
-3. **Indexing**: The shared recordings directory is watched by VSS Search‑MS. Clips are pushed to DataPrep, embedded, and stored in VDMS.
+3. **Indexing**: Smart NVR sends selected clips to Pipeline Manager, which forwards them to DataPrep. Embeddings are stored in VDMS.
 4. **Querying**: Users query VSS UI with optional time‑range filters. Search‑MS retrieves and ranks relevant clips.
 5. **Visualization**: Results are shown in VSS UI while Smart NVR UI remains available for live context.
 6. **Telemetry**: Collector streams system metrics to Pipeline Manager and the UI.
 
 ## Integration Points
 
-- **Shared recordings path** ties Smart NVR output directly to VSS Search input.
+- **Smart NVR upload path** ties selected clips directly to VSS Search input.
 - **Pipeline Manager endpoints** unify search configuration and retrieval.
 - **Telemetry WS** provides live metrics for operational visibility.
 

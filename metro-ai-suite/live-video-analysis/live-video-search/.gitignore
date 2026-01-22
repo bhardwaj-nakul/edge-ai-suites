@@ -145,5 +145,5 @@ certificates/
 # Frigate config (keep base templates)
 config/frigate-config/*
 !config/frigate-config/config-default.yml
-!config/frigate-config/config-scenescape.yml
+!config/frigate-config/config-rtsp.yml
 !config/frigate-config/config.yml
