@@ -26,7 +26,24 @@ cameras:
             - detect
             - record
       output_args:
-        record: preset-record-mjpeg
+        record:
+          - -f
+          - segment
+          - -segment_time
+          - '10'
+          - -segment_format
+          - mp4
+          - -reset_timestamps
+          - '1'
+          - -strftime
+          - '1'
+          - -c:v
+          - libx264
+          - -pix_fmt
+          - yuv420p
+          - -movflags
+          - +faststart
+          - -an
     detect:
       enabled: true
       width: 1280
