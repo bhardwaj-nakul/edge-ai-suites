@@ -25,6 +25,8 @@ cameras:
           roles:
             - detect
             - record
+      output_args:
+        record: preset-record-mjpeg
     detect:
       enabled: true
       width: 1280
