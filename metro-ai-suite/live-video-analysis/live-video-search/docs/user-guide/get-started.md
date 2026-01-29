@@ -178,6 +178,8 @@ This workflow assumes the stack is running and cameras are configured in Frigate
 
 Search results include clip timestamps, confidence scores, and metadata. Use the playback controls to jump to the exact event.
 
+![Live Video Search - Review Results](_assets/Live-video-search-gif.gif)
+
 ### Tips
 
 - If results are empty, confirm you added clips from Smart NVR UI.

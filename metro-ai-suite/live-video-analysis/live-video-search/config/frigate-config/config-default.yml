@@ -13,7 +13,7 @@ logger:
 record:
   enabled: true
   retain:
-    days: 7
+    days: 0.5
     mode: all
 
 cameras:
@@ -37,7 +37,7 @@ cameras:
     record:
       enabled: true
       retain:
-        days: 1
+        days: 0.5
     snapshots:
       enabled: true
       retain:
@@ -63,7 +63,7 @@ cameras:
     record:
       enabled: true
       retain:
-        days: 1
+        days: 0.5
     objects:
       track: [person, vehicle]
       filters:
@@ -96,7 +96,7 @@ cameras:
     record:
       enabled: true
       retain:
-        days: 1
+        days: 0.5
     objects:
       track: [person, vehicle]
       filters:
