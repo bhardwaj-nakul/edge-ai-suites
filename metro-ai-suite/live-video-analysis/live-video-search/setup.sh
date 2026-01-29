@@ -35,7 +35,8 @@ stop_containers() {
     docker compose \
       -f docker/compose.search.yaml \
       -f docker/compose.smart-nvr.yaml \
-      -f docker/compose.telemetry.yaml \
+            -f docker/compose.telemetry.yaml \
+            -f docker/compose.rtsp-test.yaml \
       down
     if [ $? -ne 0 ]; then
         echo -e "${RED}ERROR: Failed to stop and remove containers.${NC}"
@@ -94,7 +95,7 @@ elif [ "$1" = "--down" ]; then
 elif [ "$1" = "--clean-data" ]; then
     stop_containers || return 1
     echo -e "${YELLOW}Removing Docker volumes created by the application... ${NC}"
-    docker volume rm docker_minio_data docker_pg_data docker_vdms_db docker_data_prep docker_mosquitto_data docker_mosquitto_log docker_redis_data 2>/dev/null || true
+    docker volume rm docker_minio_data docker_pg_data docker_vdms_db docker_data_prep docker_mosquitto_data docker_mosquitto_log docker_redis_data docker_frigate_recordings data-prep minikube 2>/dev/null || true
     echo -e "${GREEN}Clean operation completed successfully! ${NC}"
     return 0
 fi
